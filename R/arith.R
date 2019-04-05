@@ -13,7 +13,8 @@ rray_arith_base <- function(op, x, y) {
   restore_type <- vec_type2(x, y)
 
   # Apply function
-  res <- rray_op_binary_cpp(op, x, y)
+  xy <- rray_cast_inner_common(x, y)
+  res <- rray_op_binary_cpp(op, xy[[1]], xy[[2]])
 
   # Add dim names
   dim_names(res) <- dim_nms

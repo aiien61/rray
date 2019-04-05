@@ -64,6 +64,8 @@ NULL
 #' @importFrom rlang expr
 #' @importFrom rlang list2
 #' @importFrom rlang set_names
+#' @importFrom rlang env_get
+#' @importFrom rlang ns_env
 NULL
 
 #' @importFrom utils head tail
