@@ -100,6 +100,27 @@ rray_subset <- function(x, ...) {
   vec_restore(out, x)
 }
 
+rray_subset_assign_impl2 <- function(x, ..., value) {
+  #x_subset <- rray_subset(x, ...)
+  value <- rray_cast_inner(value, x)
+  value <- rray_dims_match(value, vec_dims(x))
+  #value <- rray_broadcast(value, vec_dim(x_subset))
+
+  indexer <- rray_as_index(x, ..., with_drop = FALSE)
+  indexer <- map(indexer, maybe_missing, default = NULL)
+
+  x_data <- rray_subset_assign_cpp_impl(x, value, vec_dim(value), indexer)
+
+  res <- vec_restore(x_data, x)
+
+  res
+}
+
+rray_subset_assign_cpp_impl <- function(x, y, dim, slice_indices) {
+  slice_indices <- map(slice_indices, as_cpp_idx)
+  rray_subset_assign_cpp(x, list(y), dim, slice_indices)
+}
+
 #' @rdname rray_subset
 #' @export
 `[.vctrs_rray` <- function(x, ..., drop = FALSE) {

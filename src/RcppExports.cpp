@@ -146,6 +146,34 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rray_bind_assign_cpp
+SEXP rray_bind_assign_cpp(SEXP out, List args, List dims, List slice_indices_list);
+RcppExport SEXP _rray_rray_bind_assign_cpp(SEXP outSEXP, SEXP argsSEXP, SEXP dimsSEXP, SEXP slice_indices_listSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type out(outSEXP);
+    Rcpp::traits::input_parameter< List >::type args(argsSEXP);
+    Rcpp::traits::input_parameter< List >::type dims(dimsSEXP);
+    Rcpp::traits::input_parameter< List >::type slice_indices_list(slice_indices_listSEXP);
+    rcpp_result_gen = Rcpp::wrap(rray_bind_assign_cpp(out, args, dims, slice_indices_list));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rray_subset_assign_cpp
+SEXP rray_subset_assign_cpp(SEXP x, List arg, IntegerVector dim, List slice_indices);
+RcppExport SEXP _rray_rray_subset_assign_cpp(SEXP xSEXP, SEXP argSEXP, SEXP dimSEXP, SEXP slice_indicesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type x(xSEXP);
+    Rcpp::traits::input_parameter< List >::type arg(argSEXP);
+    Rcpp::traits::input_parameter< IntegerVector >::type dim(dimSEXP);
+    Rcpp::traits::input_parameter< List >::type slice_indices(slice_indicesSEXP);
+    rcpp_result_gen = Rcpp::wrap(rray_subset_assign_cpp(x, arg, dim, slice_indices));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rray_rray_ones_cpp", (DL_FUNC) &_rray_rray_ones_cpp, 1},
@@ -159,6 +187,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rray_rray_op_unary_two_cpp", (DL_FUNC) &_rray_rray_op_unary_two_cpp, 4},
     {"_rray_rray_op_unary_cpp", (DL_FUNC) &_rray_rray_op_unary_cpp, 2},
     {"_rray_rray_reducer_cpp", (DL_FUNC) &_rray_rray_reducer_cpp, 3},
+    {"_rray_rray_bind_assign_cpp", (DL_FUNC) &_rray_rray_bind_assign_cpp, 4},
+    {"_rray_rray_subset_assign_cpp", (DL_FUNC) &_rray_rray_subset_assign_cpp, 4},
     {NULL, NULL, 0}
 };
 

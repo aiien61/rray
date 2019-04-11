@@ -129,6 +129,83 @@ rray_bind <- function(..., axis = 1L) {
   out
 }
 
+rray_bind2 <- function(..., axis = 1L) {
+
+  axis <- vec_cast(axis, integer())
+  validate_axis(axis, x = numeric(), dims = Inf)
+
+  args <- compact(list2(...))
+
+  if (length(args) == 0L) {
+    return(NULL)
+  }
+
+  # Allow for going up in dimension
+  dims <- max(rray_dims_common(!!!args), axis)
+
+  # Finalize partial types (including unspecified)
+  # (have to do it again after calling vec_type())
+  args <- map(args, vec_type_finalise)
+  args <- map(args, rray_dims_match, dims = dims)
+
+  # Get types, expand to the correct dimensions, and set axis dim to 0
+  arg_types <- map(args, vec_type)
+  arg_types <- map(arg_types, vec_type_finalise)
+  arg_types <- map(arg_types, rray_dims_match, dims = dims)
+  arg_types <- map(arg_types, set_axis_to_zero, axis = axis)
+
+  axis_sizes <- map_int(args, pull_axis_dim, axis = axis)
+  out_axis_size <- sum(axis_sizes)
+
+  if (axis == 1L) {
+    out_size <- out_axis_size
+  }
+  else {
+    out_size <- vec_size_common(!!! args)
+  }
+
+  # `axis` is currently 0, `size` is also 0 (could be the same axis)
+  out_partial <- reduce(arg_types, vec_type2)
+
+  if (axis != 1L) {
+    dim(out_partial)[axis] <- out_axis_size
+  }
+
+  out <- vec_na(out_partial, n = out_size)
+
+  # Build the assignment expr
+  missing <- build_missings(dims, axis)
+  assigner <- expr(dots_list(!!!missing$before, at, !!!missing$after, .ignore_empty = "none", .preserve_empty = TRUE))
+
+  pos <- 1L
+
+  slice_indices_list <- rlang::new_list(length(args))
+
+  for (i in seq_along(args)) {
+    arg <- args[[i]]
+    arg_axis_size <- axis_sizes[i]
+
+    if (arg_axis_size == 0L) {
+      next
+    }
+
+    # `at` controls where we update `out` at
+    at <- pos:(pos + arg_axis_size - 1L)
+
+    slice_indices_list[[i]] <- eval_bare(assigner)
+    slice_indices_list[[i]] <- map(slice_indices_list[[i]], maybe_missing, default = NULL)
+    slice_indices_list[[i]] <- map(slice_indices_list[[i]], as_cpp_idx)
+
+    pos <- pos + arg_axis_size
+  }
+
+  out <- rray_bind_assign_cpp(out, args, map(args, vec_dim), slice_indices_list)
+
+  dim_names(out) <- rray_dim_names_common_along_axis(!!!args, axis = axis, dim = vec_dim(out))
+
+  out
+}
+
 #' @rdname rray_bind
 #' @export
 rray_rbind <- function(...) {
