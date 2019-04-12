@@ -81,7 +81,7 @@ test_that("vectors can be bound to other vectors", {
 
   expect_equal(
     rray_bind(a, b),
-    1:4
+    new_array(1:4)
   )
 
   expect_equal(
@@ -274,7 +274,7 @@ test_that("can bind with NA values", {
 
   expect_equal(
     rray_bind(NA, 1),
-    c(NA, 1)
+    new_array(c(NA, 1))
   )
 
   expect_equal(
@@ -328,7 +328,7 @@ test_that("can rray_bind() with unspecified input", {
   expect_equal(rray_bind(vctrs::unspecified()), new_array(logical()))
   expect_equal(rray_bind(vctrs::unspecified(1)), new_array(NA))
 
-  expect_equal(rray_bind(NA, 1, vctrs::unspecified(1)), c(NA, 1, NA))
+  expect_equal(rray_bind(NA, 1, vctrs::unspecified(1)), new_array(c(NA, 1, NA)))
 })
 
 test_that("can rray_bind() with length 0 input", {
@@ -346,7 +346,7 @@ test_that("can rray_bind() with length 0 input", {
   # type of double() is used to determine output
   expect_identical(
     rray_bind(double(), 1L),
-    1
+    new_array(1)
   )
 
 })
@@ -354,6 +354,7 @@ test_that("can rray_bind() with length 0 input", {
 test_that("length 0 input outer names are ignored", {
 
   expect <- 1
+  expect <- new_array(expect)
   names(expect) <- "y"
 
   expect_identical(

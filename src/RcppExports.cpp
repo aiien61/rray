@@ -6,6 +6,21 @@
 
 using namespace Rcpp;
 
+// rray_bind_assign_cpp
+SEXP rray_bind_assign_cpp(SEXP out, std::vector<std::size_t> dim, Rcpp::List args, Rcpp::List lst_of_range_lsts, Rcpp::List lst_of_arg_dim);
+RcppExport SEXP _rray_rray_bind_assign_cpp(SEXP outSEXP, SEXP dimSEXP, SEXP argsSEXP, SEXP lst_of_range_lstsSEXP, SEXP lst_of_arg_dimSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type out(outSEXP);
+    Rcpp::traits::input_parameter< std::vector<std::size_t> >::type dim(dimSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type args(argsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type lst_of_range_lsts(lst_of_range_lstsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type lst_of_arg_dim(lst_of_arg_dimSEXP);
+    rcpp_result_gen = Rcpp::wrap(rray_bind_assign_cpp(out, dim, args, lst_of_range_lsts, lst_of_arg_dim));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rray_ones_cpp
 SEXP rray_ones_cpp(const std::vector<std::size_t>& shape);
 RcppExport SEXP _rray_rray_ones_cpp(SEXP shapeSEXP) {
@@ -146,20 +161,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// rray_bind_assign_cpp
-SEXP rray_bind_assign_cpp(SEXP out, List args, List dims, List slice_indices_list);
-RcppExport SEXP _rray_rray_bind_assign_cpp(SEXP outSEXP, SEXP argsSEXP, SEXP dimsSEXP, SEXP slice_indices_listSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type out(outSEXP);
-    Rcpp::traits::input_parameter< List >::type args(argsSEXP);
-    Rcpp::traits::input_parameter< List >::type dims(dimsSEXP);
-    Rcpp::traits::input_parameter< List >::type slice_indices_list(slice_indices_listSEXP);
-    rcpp_result_gen = Rcpp::wrap(rray_bind_assign_cpp(out, args, dims, slice_indices_list));
-    return rcpp_result_gen;
-END_RCPP
-}
 // rray_subset_assign_cpp
 SEXP rray_subset_assign_cpp(SEXP x, List arg, IntegerVector dim, List slice_indices);
 RcppExport SEXP _rray_rray_subset_assign_cpp(SEXP xSEXP, SEXP argSEXP, SEXP dimSEXP, SEXP slice_indicesSEXP) {
@@ -176,6 +177,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_rray_rray_bind_assign_cpp", (DL_FUNC) &_rray_rray_bind_assign_cpp, 5},
     {"_rray_rray_ones_cpp", (DL_FUNC) &_rray_rray_ones_cpp, 1},
     {"_rray_rray_zeros_cpp", (DL_FUNC) &_rray_rray_zeros_cpp, 1},
     {"_rray_rray_eye_cpp", (DL_FUNC) &_rray_rray_eye_cpp, 2},
@@ -187,7 +189,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rray_rray_op_unary_two_cpp", (DL_FUNC) &_rray_rray_op_unary_two_cpp, 4},
     {"_rray_rray_op_unary_cpp", (DL_FUNC) &_rray_rray_op_unary_cpp, 2},
     {"_rray_rray_reducer_cpp", (DL_FUNC) &_rray_rray_reducer_cpp, 3},
-    {"_rray_rray_bind_assign_cpp", (DL_FUNC) &_rray_rray_bind_assign_cpp, 4},
     {"_rray_rray_subset_assign_cpp", (DL_FUNC) &_rray_rray_subset_assign_cpp, 4},
     {NULL, NULL, 0}
 };

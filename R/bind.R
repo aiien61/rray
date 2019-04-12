@@ -77,133 +77,49 @@ rray_bind <- function(..., axis = 1L) {
   # Finalize partial types (including unspecified)
   # (have to do it again after calling vec_type())
   args <- map(args, vec_type_finalise)
+  args <- rray_cast_inner_common(!!!args)
 
-  # Get types, expand to the correct dimensions, and set axis dim to 0
-  arg_types <- map(args, vec_type)
-  arg_types <- map(arg_types, vec_type_finalise)
-  arg_types <- map(arg_types, rray_dims_match, dims = dims)
-  arg_types <- map(arg_types, set_axis_to_zero, axis = axis)
+  # We have to reshape each arg so that they all have the same dims before combining
+  # TODO - Would be nice to be able to do this at the c++ level
+  lst_of_arg_reshape_dim <- map(args, function(x) dim_extend(vec_dim(x), dims))
 
   axis_sizes <- map_int(args, pull_axis_dim, axis = axis)
   out_axis_size <- sum(axis_sizes)
 
-  if (axis == 1L) {
-    out_size <- out_axis_size
-  }
-  else {
-    out_size <- vec_size_common(!!! args)
-  }
+  out_info <- build_out_info(args, dims, axis, out_axis_size)
 
-  # `axis` is currently 0, `size` is also 0 (could be the same axis)
-  out_partial <- reduce(arg_types, vec_type2)
-
-  if (axis != 1L) {
-    dim(out_partial)[axis] <- out_axis_size
-  }
-
-  out <- vec_na(out_partial, n = out_size)
-
-  # Build the assignment expr
-  missing <- build_missings(dims, axis)
-  assigner <- expr(rray_subset(out, !!!missing$before, at, !!!missing$after) <- arg)
+  # TODO - do this at the c++ level? then you could create
+  # lst_of_range_lsts at that level too. you'd just have to pass
+  # `axis_sizes` along
+  # Build the positions where xt::all() will be used
+  alls <- build_alls(dims, axis)
 
   pos <- 1L
+  lst_of_range_lsts <- rlang::new_list(length(args))
+
+  # TODO - with the above todo, we should be able to move this to c++
   for (i in seq_along(args)) {
-    arg <- args[[i]]
     arg_axis_size <- axis_sizes[i]
 
     if (arg_axis_size == 0L) {
       next
     }
 
-    # `at` controls where we update `out` at
-    at <- pos:(pos + arg_axis_size - 1L)
+    # `range` controls where we update `out` at
+    range <- c(pos, pos + arg_axis_size - 1L)
+    range <- as_cpp_idx(range)
 
-    eval_bare(assigner)
-
-    pos <- pos + arg_axis_size
-  }
-
-  dim_names(out) <- rray_dim_names_common_along_axis(!!!args, axis = axis, dim = vec_dim(out))
-
-  out
-}
-
-rray_bind2 <- function(..., axis = 1L) {
-
-  axis <- vec_cast(axis, integer())
-  validate_axis(axis, x = numeric(), dims = Inf)
-
-  args <- compact(list2(...))
-
-  if (length(args) == 0L) {
-    return(NULL)
-  }
-
-  # Allow for going up in dimension
-  dims <- max(rray_dims_common(!!!args), axis)
-
-  # Finalize partial types (including unspecified)
-  # (have to do it again after calling vec_type())
-  args <- map(args, vec_type_finalise)
-  args <- map(args, rray_dims_match, dims = dims)
-
-  # Get types, expand to the correct dimensions, and set axis dim to 0
-  arg_types <- map(args, vec_type)
-  arg_types <- map(arg_types, vec_type_finalise)
-  arg_types <- map(arg_types, rray_dims_match, dims = dims)
-  arg_types <- map(arg_types, set_axis_to_zero, axis = axis)
-
-  axis_sizes <- map_int(args, pull_axis_dim, axis = axis)
-  out_axis_size <- sum(axis_sizes)
-
-  if (axis == 1L) {
-    out_size <- out_axis_size
-  }
-  else {
-    out_size <- vec_size_common(!!! args)
-  }
-
-  # `axis` is currently 0, `size` is also 0 (could be the same axis)
-  out_partial <- reduce(arg_types, vec_type2)
-
-  if (axis != 1L) {
-    dim(out_partial)[axis] <- out_axis_size
-  }
-
-  out <- vec_na(out_partial, n = out_size)
-
-  # Build the assignment expr
-  missing <- build_missings(dims, axis)
-  assigner <- expr(dots_list(!!!missing$before, at, !!!missing$after, .ignore_empty = "none", .preserve_empty = TRUE))
-
-  pos <- 1L
-
-  slice_indices_list <- rlang::new_list(length(args))
-
-  for (i in seq_along(args)) {
-    arg <- args[[i]]
-    arg_axis_size <- axis_sizes[i]
-
-    if (arg_axis_size == 0L) {
-      next
-    }
-
-    # `at` controls where we update `out` at
-    at <- pos:(pos + arg_axis_size - 1L)
-
-    slice_indices_list[[i]] <- eval_bare(assigner)
-    slice_indices_list[[i]] <- map(slice_indices_list[[i]], maybe_missing, default = NULL)
-    slice_indices_list[[i]] <- map(slice_indices_list[[i]], as_cpp_idx)
+    lst_of_range_lsts[[i]] <- c(alls$before, list(range), alls$after)
 
     pos <- pos + arg_axis_size
   }
 
-  out <- rray_bind_assign_cpp(out, args, map(args, vec_dim), slice_indices_list)
+  out <- rray_bind_assign_cpp(out_info$partial, out_info$dim, args, lst_of_range_lsts, lst_of_arg_reshape_dim)
 
-  dim_names(out) <- rray_dim_names_common_along_axis(!!!args, axis = axis, dim = vec_dim(out))
+  new_dim_names <- rray_dim_names_common_along_axis(!!!args, axis = axis, dim = out_info$dim)
+  out <- set_full_dim_names(out, new_dim_names)
 
-  out
+  vec_restore(out, out_info$partial)
 }
 
 #' @rdname rray_bind
@@ -221,6 +137,34 @@ rray_cbind <- function(...) {
 # ------------------------------------------------------------------------------
 # Helpers
 
+build_out_info <- function(args, dims, axis, out_axis_size) {
+
+  # Get types, expand to the correct dimensions, and set axis dim to 0
+  arg_types <- map(args, vec_type)
+  arg_types <- map(arg_types, vec_type_finalise)
+  arg_types <- map(arg_types, rray_dims_match, dims = dims)
+  arg_types <- map(arg_types, set_axis_to_zero, axis = axis)
+
+  # `axis` is currently 0, `size` is also 0 (could be the same axis)
+  out_partial <- reduce(arg_types, vec_type2)
+
+  # Now we set `axis`, so only `size` is 0
+  if (axis != 1L) {
+    dim(out_partial)[axis] <- out_axis_size
+  }
+
+  out_dim <- dim(out_partial)
+
+  if (axis == 1L) {
+    out_dim[1] <- out_axis_size
+  }
+  else {
+    out_dim[1] <- vec_size_common(!!! args)
+  }
+
+  list(partial = out_partial, dim = out_dim)
+}
+
 pull_axis_dim <- function(x, axis) {
   if (vec_dims(x) < axis) {
     1L
@@ -235,15 +179,15 @@ set_axis_to_zero <- function(x, axis) {
   x
 }
 
-build_missings <- function(dims, axis) {
+build_alls <- function(dims, axis) {
 
-  needs_missing <- seq_len(dims)[-axis]
+  needs_null <- seq_len(dims)[-axis]
 
-  times_before <- sum(needs_missing < axis)
-  times_after  <- sum(needs_missing > axis)
+  times_before <- sum(needs_null < axis)
+  times_after  <- sum(needs_null > axis)
 
-  before <- rep(list(missing_arg()), times = times_before)
-  after  <- rep(list(missing_arg()), times = times_after)
+  before <- rep(list(NULL), times = times_before)
+  after  <- rep(list(NULL), times = times_after)
 
   list(before = before, after = after)
 }
