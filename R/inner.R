@@ -39,14 +39,21 @@ rray_cast_inner <- function(x, to) {
     return(x)
   }
 
-  # same as vctrs:::shape_broadcast() in this case
-  to <- rray_reshape(to, shape_dim(x))
+  if (identical(to, double())) {
+    rray_coerce_bare(x, "double")
+  }
+  else if (identical(to, integer())) {
+    rray_coerce_bare(x, "integer")
+  }
+  else if (identical(to, logical())) {
+    rray_coerce_bare(x, "logical")
+  }
+}
 
-  res <- vec_cast(vec_data(x), to)
-
-  res <- set_full_dim_names(res, dim_names(x))
-
-  vec_restore(res, x)
+rray_coerce_bare <- function(x, type) {
+  # Unexported wrapper around Rf_coerceVector()
+  coerce <- rlang::env_get(rlang::ns_env("rlang"), "vec_coerce")
+  coerce(x, type)
 }
 
 # Cast inputs to the same _inner_ types
