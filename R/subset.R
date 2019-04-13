@@ -91,11 +91,19 @@
 #' @family rray subsetters
 #' @export
 rray_subset <- function(x, ...) {
-  out <- vec_data(x)
 
-  indexer <- rray_as_index(x, ...)
+  if (!is_rray_type(x)) {
+    abort("`x` is not subsettable")
+  }
 
-  out <- eval_bare(expr(out[!!!indexer]))
+  indexer <- rray_as_index(x, ..., with_drop = FALSE)
+
+  indexer <- map(indexer, maybe_missing, default = NULL)
+  indexer <- map(indexer, as_cpp_idx)
+
+  out <- rray_subset_cpp(x, indexer)
+
+  #out <- eval_bare(expr(out[!!!indexer]))
 
   vec_restore(out, x)
 }

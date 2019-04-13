@@ -1,12 +1,71 @@
 #include <rray_types.h>
 #include <xtensor/xview.hpp>
 #include <xtensor/xdynamic_view.hpp>
-#include <xtensor/xio.hpp>
-#include "xtensor/xadapt.hpp"
+#include <xtensor/xarray.hpp>
+#include <xtensor/xadapt.hpp>
 #include <tools/errors.hpp>
 #include <Rcpp.h>
 using namespace Rcpp;
 using namespace rray;
+
+
+template <typename T>
+SEXP rray_subset_impl(const xt::rarray<T>& x, List slice_indices) {
+
+  xt::xdynamic_slice_vector sv({});
+
+  for (int i = 0; i < slice_indices.size(); ++i) {
+
+    if (Rf_isNull(slice_indices[i])) {
+      sv.push_back(xt::all());
+    }
+    else {
+      std::vector<std::size_t> slice = slice_indices[i];
+      sv.push_back(xt::keep(slice));
+    }
+
+  }
+
+  xt::rarray<T> res = xt::dynamic_view(x, sv);
+
+  return res;
+}
+
+// [[Rcpp::export]]
+SEXP rray_subset_cpp(SEXP x, List slice_indices) {
+
+  if (Rf_isNull(x)) {
+    return R_NilValue;
+  }
+
+  // Switch on X
+  switch(TYPEOF(x)) {
+
+  case REALSXP: {
+    const xt::rarray<double>& x_rarray = x;
+    return rray_subset_impl(x_rarray, slice_indices);
+  }
+
+  case INTSXP: {
+    const xt::rarray<int>& x_rarray = x;
+    return rray_subset_impl(x_rarray, slice_indices);
+  }
+
+  case LGLSXP: {
+    return rray_subset_impl(xt::rarray<rlogical>(x), slice_indices);
+  }
+
+  default: {
+    error_unknown_type();
+  }
+
+  }
+
+  return x;
+
+
+}
+
 
 template <typename T>
 SEXP rray_subset_assign_impl(xt::rarray<T> x, List arg, IntegerVector dim, List slice_indices) {

@@ -49,6 +49,10 @@ rray_reducer_cpp <- function(op, x, axes) {
     .Call(`_rray_rray_reducer_cpp`, op, x, axes)
 }
 
+rray_subset_cpp <- function(x, slice_indices) {
+    .Call(`_rray_rray_subset_cpp`, x, slice_indices)
+}
+
 rray_subset_assign_cpp <- function(x, arg, dim, slice_indices) {
     .Call(`_rray_rray_subset_assign_cpp`, x, arg, dim, slice_indices)
 }
